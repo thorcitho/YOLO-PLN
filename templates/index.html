@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detector de Animales Andinos - YOLO 11</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Detector de Animales Andinos</h1>
+            <p>Sistema de detección con YOLO 11</p>
+        </header>
+
+        <!-- Pestañas -->
+        <div class="tabs">
+            <button class="tab-button active" onclick="openTab('realtime')">
+                Tiempo Real
+            </button>
+            <button class="tab-button" onclick="openTab('video')">
+                Cargar Video
+            </button>
+        </div>
+
+        <!-- TAB 1: TIEMPO REAL -->
+        <div id="realtime" class="tab-content active">
+            <div class="processed-layout">
+                <div class="processed-left">
+                    <div class="video-container" id="realtimeContainer">
+                        <img id="webcamStream" src="" alt="Esperando cámara..." style="cursor: pointer;">
+                        <div id="noCamera" class="placeholder">
+                            <p>Presiona "Iniciar Cámara" para comenzar</p>
+                        </div>
+                    </div>
+                    
+                    <div class="controls">
+                        <button id="startBtn" class="btn btn-primary" onclick="startCamera()">
+                            Iniciar Cámara
+                        </button>
+                        <button id="stopBtn" class="btn btn-secondary" onclick="stopCamera()" disabled>
+                            Detener Cámara
+                        </button>
+                    </div>
+
+                    <div id="realtimeStats" class="stats"></div>
+                </div>
+                <div class="processed-right">
+                    <div id="infoPanelRealtime" class="info-panel">
+                        <h3>Descripción del Animal</h3>
+                        <div class="info-image">
+                            <div class="info-image-placeholder">Imagen: static/img/&lt;animal&gt;.jpg</div>
+                            <img id="rtPanelImage" alt="Imagen del animal" />
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Nombre:</span>
+                            <span id="rtPanelAnimalName" class="info-value">—</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Científico:</span>
+                            <span id="rtPanelScientificName" class="info-value">—</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Hábitat:</span>
+                            <span id="rtPanelHabitat" class="info-value">—</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Usos:</span>
+                            <span id="rtPanelUses" class="info-value">—</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Confianza:</span>
+                            <span id="rtPanelConfidence" class="info-value">—</span>
+                        </div>
+                        <div class="info-row column">
+                            <span class="info-label">Características:</span>
+                            <ul id="rtPanelCharacteristics" class="info-list"></ul>
+                        </div>
+                        <div class="info-row column">
+                            <span class="info-label">Descripción:</span>
+                            <p id="rtPanelDescription" class="info-paragraph">—</p>
+                        </div>
+                        <div class="chatbot">
+                            <h4>Chat breve</h4>
+                            <textarea id="rtChatQuestion" placeholder="Pregunta breve sobre el animal..." rows="3"></textarea>
+                            <button class="btn btn-primary" id="rtChatSendBtn" type="button">Preguntar</button>
+                            <div id="rtChatAnswer" class="chat-answer"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: CARGAR VIDEO -->
+        <div id="video" class="tab-content">
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <input type="file" id="videoInput" accept="video/*" style="display:none;">
+                    <div class="upload-content">
+                        <div class="upload-icon">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="12" y1="18" x2="12" y2="12"></line>
+                                <line x1="9" y1="15" x2="15" y2="15"></line>
+                            </svg>
+                        </div>
+                        <p class="upload-text">Arrastra un video o haz click para seleccionar</p>
+                        <p class="upload-hint">Formatos: MP4, AVI, MOV</p>
+                    </div>
+                </div>
+
+                <div id="uploadProgress" class="progress-container" style="display:none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p id="progressText">Subiendo...</p>
+                </div>
+            </div>
+
+            <div id="videoPreview" class="video-preview" style="display:none;">
+                <h3>Video Original</h3>
+                <video id="originalVideo" controls></video>
+            </div>
+
+            <div id="historySection" class="history-section">
+                <div class="history-header">
+                    <h3>Historial de videos procesados</h3>
+                    <button class="btn btn-secondary" id="refreshHistoryBtn">Actualizar</button>
+                </div>
+                <div id="historyList" class="history-list">
+                    <p class="history-empty">Sin videos procesados aún.</p>
+                </div>
+            </div>
+
+            <div id="liveProcessing" class="video-preview" style="display:none;">
+                <h3>Análisis en Tiempo Real</h3>
+                <div class="video-container" id="liveProcessingContainer">
+                    <img id="liveStream" src="" alt="Procesando..." style="cursor: pointer;">
+                    <div id="processingPlaceholder" class="placeholder">
+                        <p>Iniciando análisis...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="processedVideo" class="video-preview" style="display:none;">
+                <h3>Video Procesado con Detecciones</h3>
+                <div class="processed-layout">
+                    <div class="processed-left">
+                        <div class="video-container processed-container" id="processedVideoContainer">
+                            <video id="detectedVideo" controls style="cursor: pointer;"></video>
+                            <canvas id="detectedOverlay" class="overlay-canvas"></canvas>
+                        </div>
+                        <a id="downloadBtn" class="btn btn-primary" download>
+                            Descargar Video
+                        </a>
+                    </div>
+                    <div class="processed-right">
+                        <div id="infoPanel" class="info-panel">
+                            <h3>Descripción del Animal</h3>
+                            <div class="info-image">
+                                <div class="info-image-placeholder">Imagen: static/img/&lt;animal&gt;.jpg</div>
+                                <img id="panelImage" alt="Imagen del animal" />
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Nombre:</span>
+                                <span id="panelAnimalName" class="info-value">—</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Científico:</span>
+                                <span id="panelScientificName" class="info-value">—</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Hábitat:</span>
+                                <span id="panelHabitat" class="info-value">—</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Usos:</span>
+                                <span id="panelUses" class="info-value">—</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Confianza:</span>
+                                <span id="panelConfidence" class="info-value">—</span>
+                            </div>
+                            <div class="info-row column">
+                                <span class="info-label">Características:</span>
+                                <ul id="panelCharacteristics" class="info-list"></ul>
+                            </div>
+                            <div class="info-row column">
+                                <span class="info-label">Descripción:</span>
+                                <p id="panelDescription" class="info-paragraph">—</p>
+                            </div>
+                        <div class="chatbot">
+                            <h4>Chat breve</h4>
+                            <textarea id="chatQuestion" placeholder="Haz una pregunta corta..." rows="3"></textarea>
+                            <button class="btn btn-primary" id="chatSendBtn" type="button">Preguntar</button>
+                            <div id="chatAnswer" class="chat-answer"></div>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info de clases -->
+        <div class="classes-info">
+            <h3>Clases detectables</h3>
+            <div id="classesList" class="classes-list">
+                <span class="class-badge">Alpaca</span>
+                <span class="class-badge">Llama</span>
+                <span class="class-badge">Cuy</span>
+                <span class="class-badge">Oveja</span>
+                <span class="class-badge">Vaca</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para mostrar descripción PLN -->
+    <div id="animalModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <h2 id="modalAnimalName"></h2>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <h3>Nombre Científico</h3>
+                    <p id="modalScientificName"></p>
+                </div>
+                <div class="modal-section">
+                    <h3>Descripción</h3>
+                    <p id="modalDescription"></p>
+                </div>
+                <div class="modal-section">
+                    <h3>Hábitat</h3>
+                    <p id="modalHabitat"></p>
+                </div>
+                <div class="modal-section">
+                    <h3>Características</h3>
+                    <ul id="modalCharacteristics"></ul>
+                </div>
+                <div class="modal-section">
+                    <h3>Usos</h3>
+                    <p id="modalUses"></p>
+                </div>
+                <div class="modal-section">
+                    <h3>Confianza de Detección</h3>
+                    <p id="modalConfidence"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

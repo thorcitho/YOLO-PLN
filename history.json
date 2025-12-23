@@ -1,0 +1,119 @@
+[
+  {
+    "original_filename": "video.mp4",
+    "output_filename": "detected_20251223_063952.mp4",
+    "created_at": "20251223_063952",
+    "status": "completed",
+    "progress": 100,
+    "url": "/detected/detected_20251223_063952.mp4",
+    "fps": 30.0,
+    "width": 480,
+    "height": 864,
+    "detections": [
+      {
+        "class": "alpaca",
+        "confidence": 0.68,
+        "bbox": {
+          "x1": 80.38288879394531,
+          "y1": 296.67681884765625,
+          "x2": 262.88519287109375,
+          "y2": 521.9483642578125
+        }
+      },
+      {
+        "class": "alpaca",
+        "confidence": 0.61,
+        "bbox": {
+          "x1": 369.7613220214844,
+          "y1": 326.6182861328125,
+          "x2": 480.0,
+          "y2": 451.0477600097656
+        }
+      }
+    ]
+  },
+  {
+    "original_filename": "cuy.mp4",
+    "output_filename": "detected_20251223_062752.mp4",
+    "created_at": "20251223_062752",
+    "status": "completed",
+    "progress": 100,
+    "url": "/detected/detected_20251223_062752.mp4",
+    "detections": [
+      {
+        "class": "cuy",
+        "confidence": 0.85,
+        "bbox": {
+          "x1": 76.59938049316406,
+          "y1": 50.55832290649414,
+          "x2": 771.6146240234375,
+          "y2": 474.07672119140625
+        }
+      }
+    ],
+    "width": 848,
+    "height": 480
+  },
+  {
+    "original_filename": "video.mp4",
+    "output_filename": "detected_20251223_061808.mp4",
+    "created_at": "20251223_061808",
+    "status": "completed",
+    "progress": 100,
+    "url": "/detected/detected_20251223_061808.mp4",
+    "detections": [
+      {
+        "class": "alpaca",
+        "confidence": 0.68,
+        "bbox": {
+          "x1": 80.38288879394531,
+          "y1": 296.67681884765625,
+          "x2": 262.88519287109375,
+          "y2": 521.9483642578125
+        }
+      },
+      {
+        "class": "alpaca",
+        "confidence": 0.61,
+        "bbox": {
+          "x1": 369.7613220214844,
+          "y1": 326.6182861328125,
+          "x2": 480.0,
+          "y2": 451.0477600097656
+        }
+      }
+    ],
+    "width": 480,
+    "height": 864
+  },
+  {
+    "original_filename": "cuy.mp4",
+    "output_filename": "detected_20251223_061015.mp4",
+    "created_at": "20251223_061015",
+    "status": "completed",
+    "progress": 100,
+    "url": "/detected/detected_20251223_061015.mp4",
+    "detections": [
+      {
+        "class": "cuy",
+        "confidence": 0.85,
+        "bbox": {
+          "x1": 76.59938049316406,
+          "y1": 50.55832290649414,
+          "x2": 771.6146240234375,
+          "y2": 474.07672119140625
+        }
+      }
+    ],
+    "width": 848,
+    "height": 480
+  },
+  {
+    "original_filename": "cuy.mp4",
+    "output_filename": "detected_20251223_060514.mp4",
+    "created_at": "20251223_060514",
+    "status": "processing",
+    "progress": 0,
+    "url": "/detected/detected_20251223_060514.mp4"
+  }
+]
