@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Detección en Tiempo Real{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos específicos para tiempo real - Cámara más grande */
+    .realtime-layout {
+        display: flex;
+        gap: 25px;
+        align-items: flex-start;
+    }
+
+    .realtime-camera {
+        flex: 2;
+        min-width: 0;
+    }
+
+    .realtime-camera .video-container {
+        max-width: 100%;
+        width: 100%;
+        min-height: 500px;
+        aspect-ratio: 16/9;
+    }
+
+    .realtime-info {
+        flex: 1;
+        min-width: 350px;
+        max-width: 400px;
+    }
+
+    @media (max-width: 1100px) {
+        .realtime-layout {
+            flex-direction: column;
+        }
+
+        .realtime-info {
+            max-width: 100%;
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Detección en Tiempo Real</h2>
+    <p>Utiliza tu cámara web para detectar animales andinos</p>
+</div>
+
+<div class="realtime-layout">
+    <div class="realtime-camera">
+        <div class="video-container" id="realtimeContainer">
+            <img id="webcamStream" src="" alt="Esperando cámara..." style="cursor: pointer;">
+            <div id="noCamera" class="placeholder">
+                <p>Presiona "Iniciar Cámara" para comenzar</p>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn" class="btn btn-primary" onclick="startCamera()">
+                Iniciar Cámara
+            </button>
+            <button id="stopBtn" class="btn btn-secondary" onclick="stopCamera()" disabled>
+                Detener Cámara
+            </button>
+        </div>
+
+        <div id="realtimeStats" class="stats"></div>
+    </div>
+    <div class="realtime-info">
+        <div id="infoPanelRealtime" class="info-panel">
+            <h3>Descripción del Animal</h3>
+            <div class="info-image">
+                <div class="info-image-placeholder">Haz clic sobre un animal detectado</div>
+                <img id="rtPanelImage" alt="Imagen del animal" />
+            </div>
+            <div class="info-row">
+                <span class="info-label">Nombre:</span>
+                <span id="rtPanelAnimalName" class="info-value">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Científico:</span>
+                <span id="rtPanelScientificName" class="info-value">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Hábitat:</span>
+                <span id="rtPanelHabitat" class="info-value">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Usos:</span>
+                <span id="rtPanelUses" class="info-value">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Confianza:</span>
+                <span id="rtPanelConfidence" class="info-value">—</span>
+            </div>
+            <div class="info-row column">
+                <span class="info-label">Características:</span>
+                <ul id="rtPanelCharacteristics" class="info-list"></ul>
+            </div>
+            <div class="info-row column">
+                <span class="info-label">Descripción:</span>
+                <p id="rtPanelDescription" class="info-paragraph">—</p>
+            </div>
+            <div class="chatbot">
+                <h4>Chat con IA</h4>
+                <textarea id="rtChatQuestion" placeholder="Pregunta sobre el animal detectado..." rows="3"></textarea>
+                <button class="btn btn-primary" id="rtChatSendBtn" type="button">Preguntar</button>
+                <div id="rtChatAnswer" class="chat-answer"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Info de clases -->
+<div class="classes-info">
+    <h3>Clases detectables</h3>
+    <div id="classesList" class="classes-list">
+        <span class="class-badge">Alpaca</span>
+        <span class="class-badge">Llama</span>
+        <span class="class-badge">Cuy</span>
+        <span class="class-badge">Oveja</span>
+        <span class="class-badge">Vaca</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/realtime.js') }}"></script>
+{% endblock %}

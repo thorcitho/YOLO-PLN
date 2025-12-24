@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Análisis de Imágenes{% endblock %}
+
+{% block extra_css %}
+<style>
+    .image-result {
+        display: flex;
+        gap: 25px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        margin-top: 25px;
+    }
+
+    .image-left {
+        flex: 1.5;
+        min-width: 400px;
+    }
+
+    .image-right {
+        flex: 1;
+        min-width: 320px;
+    }
+
+    .image-container {
+        position: relative;
+        width: 100%;
+        background: #1a202c;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+    }
+
+    .image-container img {
+        width: 100%;
+        height: auto;
+        display: block;
+        cursor: pointer;
+    }
+
+    .image-container canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+    }
+
+    .detection-stats {
+        margin-top: 15px;
+        padding: 15px;
+        background: #f7fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .detection-stats h4 {
+        margin: 0 0 10px 0;
+        color: #2d3748;
+        font-size: 0.95rem;
+    }
+
+    .detection-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .detection-badge {
+        padding: 6px 12px;
+        background: #ebf8ff;
+        color: #2b6cb0;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    @media (max-width: 900px) {
+        .image-result {
+            flex-direction: column;
+        }
+
+        .image-left,
+        .image-right {
+            min-width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Análisis de Imágenes</h2>
+    <p>Sube una imagen para detectar animales andinos</p>
+</div>
+
+<!-- Upload Area -->
+<div class="upload-section">
+    <div class="upload-area" id="imageUploadArea">
+        <input type="file" id="imageInput" accept="image/*" style="display:none;">
+        <div class="upload-content">
+            <div class="upload-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+            </div>
+            <p class="upload-text">Arrastra una imagen o haz click para seleccionar</p>
+            <p class="upload-hint">Formatos: JPG, PNG, WEBP</p>
+        </div>
+    </div>
+</div>
+
+<!-- Processing indicator -->
+<div id="imageProcessing" class="progress-container" style="display:none;">
+    <p id="imageProcessingText">Analizando imagen...</p>
+</div>
+
+<!-- Result Section -->
+<div id="imageResultSection" style="display:none;">
+    <h3 style="color: #2b6cb0; margin-bottom: 15px;">Resultado del Análisis</h3>
+
+    <div class="image-result">
+        <div class="image-left">
+            <div class="image-container" id="resultImageContainer">
+                <img id="resultImage" src="" alt="Imagen analizada">
+                <canvas id="imageOverlay"></canvas>
+            </div>
+
+            <div class="detection-stats" id="detectionStats">
+                <h4>Animales Detectados</h4>
+                <div class="detection-list" id="detectionList">
+                    <span class="detection-badge">Ninguno detectado</span>
+                </div>
+            </div>
+
+            <div class="controls" style="justify-content: flex-start;">
+                <a id="downloadImageBtn" class="btn btn-primary" download>Descargar Imagen</a>
+                <button id="newImageBtn" class="btn btn-secondary">Nueva Imagen</button>
+            </div>
+        </div>
+
+        <div class="image-right">
+            <div id="imageInfoPanel" class="info-panel">
+                <h3>Descripción del Animal</h3>
+                <div class="info-image">
+                    <div class="info-image-placeholder">Haz clic sobre un animal detectado</div>
+                    <img id="imagePanelImage" alt="Imagen del animal" />
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Nombre:</span>
+                    <span id="imagePanelAnimalName" class="info-value">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Científico:</span>
+                    <span id="imagePanelScientificName" class="info-value">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Hábitat:</span>
+                    <span id="imagePanelHabitat" class="info-value">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Usos:</span>
+                    <span id="imagePanelUses" class="info-value">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Confianza:</span>
+                    <span id="imagePanelConfidence" class="info-value">—</span>
+                </div>
+                <div class="info-row column">
+                    <span class="info-label">Características:</span>
+                    <ul id="imagePanelCharacteristics" class="info-list"></ul>
+                </div>
+                <div class="info-row column">
+                    <span class="info-label">Descripción:</span>
+                    <p id="imagePanelDescription" class="info-paragraph">—</p>
+                </div>
+                <div class="chatbot">
+                    <h4>Chat con IA</h4>
+                    <textarea id="imageChatQuestion" placeholder="Pregunta sobre el animal detectado..."
+                        rows="3"></textarea>
+                    <button class="btn btn-primary" id="imageChatSendBtn" type="button">Preguntar</button>
+                    <div id="imageChatAnswer" class="chat-answer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Historial de Imágenes -->
+<div class="history-section">
+    <div class="history-header">
+        <h3>Historial de Imágenes</h3>
+        <button class="btn btn-secondary btn-sm" onclick="loadImageHistory()">Actualizar</button>
+    </div>
+    <div id="imageHistoryList" class="history-list">
+        <p class="history-empty">Sin imágenes procesadas aún.</p>
+    </div>
+</div>
+
+<!-- Info de clases -->
+<div class="classes-info">
+    <h3>Clases detectables</h3>
+    <div class="classes-list">
+        <span class="class-badge">Alpaca</span>
+        <span class="class-badge">Llama</span>
+        <span class="class-badge">Cuy</span>
+        <span class="class-badge">Oveja</span>
+        <span class="class-badge">Vaca</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/image.js') }}"></script>
+{% endblock %}

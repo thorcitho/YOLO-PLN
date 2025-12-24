@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Análisis de Videos{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Análisis de Videos</h2>
+    <p>Sube un video para detectar animales andinos</p>
+</div>
+
+<div class="upload-section">
+    <div class="upload-area" id="uploadArea">
+        <input type="file" id="videoInput" accept="video/*" style="display:none;">
+        <div class="upload-content">
+            <div class="upload-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="12" y1="18" x2="12" y2="12"></line>
+                    <line x1="9" y1="15" x2="15" y2="15"></line>
+                </svg>
+            </div>
+            <p class="upload-text">Arrastra un video o haz click para seleccionar</p>
+            <p class="upload-hint">Formatos: MP4, AVI, MOV</p>
+        </div>
+    </div>
+
+    <div id="uploadProgress" class="progress-container" style="display:none;">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <p id="progressText">Subiendo...</p>
+    </div>
+</div>
+
+<div id="videoPreview" class="video-preview" style="display:none;">
+    <h3>Video Original</h3>
+    <video id="originalVideo" controls></video>
+</div>
+
+<div id="historySection" class="history-section">
+    <div class="history-header">
+        <h3>Historial de videos procesados</h3>
+        <button class="btn btn-secondary" id="refreshHistoryBtn">Actualizar</button>
+    </div>
+    <div id="historyList" class="history-list">
+        <p class="history-empty">Sin videos procesados aún.</p>
+    </div>
+</div>
+
+<div id="liveProcessing" class="video-preview" style="display:none;">
+    <h3>Análisis en Tiempo Real</h3>
+    <div class="video-container" id="liveProcessingContainer">
+        <img id="liveStream" src="" alt="Procesando..." style="cursor: pointer;">
+        <div id="processingPlaceholder" class="placeholder">
+            <p>Iniciando análisis...</p>
+        </div>
+    </div>
+</div>
+
+<div id="processedVideo" class="video-preview" style="display:none;">
+    <h3>Video Procesado con Detecciones</h3>
+    <div class="processed-layout">
+        <div class="processed-left">
+            <div class="video-container processed-container" id="processedVideoContainer">
+                <video id="detectedVideo" controls style="cursor: pointer;"></video>
+                <canvas id="detectedOverlay" class="overlay-canvas"></canvas>
+            </div>
+            <a id="downloadBtn" class="btn btn-primary" download>
+                Descargar Video
+            </a>
+        </div>
+        <div class="processed-right">
+            <div id="infoPanel" class="info-panel">
+                <h3>Descripción del Animal</h3>
+                <div class="info-image">
+                    <div class="info-image-placeholder">Haz clic sobre un animal detectado</div>
+                    <img id="panelImage" alt="Imagen del animal" />
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Nombre:</span>
+                    <span id="panelAnimalName" class="info-value">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Científico:</span>
+                    <span id="panelScientificName" class="info-value">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Hábitat:</span>
+                    <span id="panelHabitat" class="info-value">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Usos:</span>
+                    <span id="panelUses" class="info-value">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Confianza:</span>
+                    <span id="panelConfidence" class="info-value">—</span>
+                </div>
+                <div class="info-row column">
+                    <span class="info-label">Características:</span>
+                    <ul id="panelCharacteristics" class="info-list"></ul>
+                </div>
+                <div class="info-row column">
+                    <span class="info-label">Descripción:</span>
+                    <p id="panelDescription" class="info-paragraph">—</p>
+                </div>
+                <div class="chatbot">
+                    <h4>Chat con IA</h4>
+                    <textarea id="chatQuestion" placeholder="Pregunta sobre el animal detectado..." rows="3"></textarea>
+                    <button class="btn btn-primary" id="chatSendBtn" type="button">Preguntar</button>
+                    <div id="chatAnswer" class="chat-answer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Info de clases -->
+<div class="classes-info">
+    <h3>Clases detectables</h3>
+    <div id="classesList" class="classes-list">
+        <span class="class-badge">Alpaca</span>
+        <span class="class-badge">Llama</span>
+        <span class="class-badge">Cuy</span>
+        <span class="class-badge">Oveja</span>
+        <span class="class-badge">Vaca</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/video.js') }}"></script>
+{% endblock %}
