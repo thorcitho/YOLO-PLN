@@ -1,5 +1,28 @@
 [
   {
+    "original_filename": "WhatsApp Video 2025-12-23 at 8.21.31 AM.mp4",
+    "output_filename": "detected_20251223_082210.mp4",
+    "created_at": "20251223_082210",
+    "status": "completed",
+    "progress": 100,
+    "url": "/detected/detected_20251223_082210.mp4",
+    "fps": 30.0,
+    "width": 848,
+    "height": 480,
+    "detections": [
+      {
+        "class": "cuy",
+        "confidence": 0.85,
+        "bbox": {
+          "x1": 76.59929656982422,
+          "y1": 50.55836486816406,
+          "x2": 771.6146240234375,
+          "y2": 474.0767822265625
+        }
+      }
+    ]
+  },
+  {
     "original_filename": "video.mp4",
     "output_filename": "detected_20251223_063952.mp4",
     "created_at": "20251223_063952",

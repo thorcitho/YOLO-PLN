@@ -24,19 +24,42 @@ os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
 def get_device():
     """Detecta automáticamente si hay GPU disponible"""
     if torch.cuda.is_available():
-        return 'cuda:0'
+        device = 'cuda:0'
+        gpu_name = torch.cuda.get_device_name(0)
+        gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3
+        print(f"GPU detectada: {gpu_name}")
+        print(f"Memoria GPU: {gpu_memory:.2f} GB")
+        return device
     elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-        return 'mps'  # Apple Silicon
+        print("Apple Silicon (MPS) detectado")
+        return 'mps'
     else:
+        print("GPU no disponible, usando CPU")
         return 'cpu'
 
 DEVICE = get_device()
-print(f"Dispositivo detectado: {DEVICE}")
+print(f"Dispositivo seleccionado: {DEVICE}")
 
 # Cargar modelo YOLO
 print("Cargando modelo YOLO...")
 try:
     model = YOLO('models/best.pt')
+    
+    # Mover modelo a GPU si está disponible
+    if DEVICE != 'cpu':
+        print(f"Moviendo modelo a {DEVICE}...")
+        model.to(DEVICE)
+        
+        # Warmup: ejecutar inferencia dummy para optimizar
+        print("Realizando warmup de GPU...")
+        import numpy as np
+        dummy_img = np.zeros((640, 640, 3), dtype=np.uint8)
+        _ = model(dummy_img, device=DEVICE, verbose=False, imgsz=640)
+        
+        if DEVICE == 'cuda:0':
+            torch.cuda.empty_cache()
+            print("Warmup completado!")
+    
     print("Modelo cargado exitosamente!")
 except Exception as e:
     print(f"Error al cargar el modelo: {e}")
@@ -202,15 +225,15 @@ def generate_frames():
     
     # Configuración optimizada según dispositivo
     if DEVICE == 'cpu':
-        # Para CPU: resolución muy baja y procesar menos frames
-        target_width, target_height = 416, 416  # Resolución más pequeña para CPU
-        frame_skip_ratio = 4  # Procesar 1 de cada 4 frames
-        imgsz = 416  # Tamaño de imagen para YOLO (más pequeño = más rápido)
-        conf_threshold = 0.4  # Threshold más bajo para menos procesamiento
+        # Para CPU: resolución baja y procesar menos frames
+        target_width, target_height = 640, 480
+        frame_skip_ratio = 3  # Procesar 1 de cada 3 frames
+        imgsz = 640
+        conf_threshold = 0.45
     else:
         # Para GPU: máxima calidad y rendimiento
-        target_width, target_height = 1280, 720  # Resolución HD para GPU
-        frame_skip_ratio = 1  # Procesar todos los frames en GPU
+        target_width, target_height = 1280, 720  # Resolución HD
+        frame_skip_ratio = 1  # Procesar todos los frames
         imgsz = 1280  # Tamaño completo para mejor detección
         conf_threshold = 0.5
     
@@ -246,18 +269,19 @@ def generate_frames():
             if model is None:
                 continue
             try:
-                # YOLO 11 optimizado según dispositivo
+                # YOLO optimizado según dispositivo
                 results = model(
                     frame,
                     imgsz=imgsz,
                     conf=conf_threshold,
-                    iou=0.7 if DEVICE != 'cpu' else 0.45,  # Mejor IOU en GPU
+                    iou=0.7 if DEVICE != 'cpu' else 0.5,
                     verbose=False,
-                    half=(DEVICE != 'cpu'),  # FP16 solo en GPU
+                    half=(DEVICE == 'cuda:0'),  # FP16 solo en CUDA
                     device=DEVICE,
-                    max_det=300 if DEVICE != 'cpu' else 50,  # Más detecciones en GPU
+                    max_det=300 if DEVICE != 'cpu' else 100,
                     agnostic_nms=False,
-                    retina_masks=False
+                    retina_masks=False,
+                    stream=False  # Desactivar streaming para mejor rendimiento
                 )
                 last_results = results[0]
                 annotated_frame = last_results.plot()
@@ -491,17 +515,18 @@ def process_video(input_path, output_path, output_filename):
             
             # Detección YOLO optimizada según dispositivo
             try:
-                # Reducir tamaño para acelerar en GPUs medias
-                imgsz = 960 if DEVICE != 'cpu' else 640
+                # Tamaño optimizado para GPU
+                imgsz = 1280 if DEVICE == 'cuda:0' else (960 if DEVICE == 'mps' else 640)
                 results = model(
                     frame,
                     imgsz=imgsz,
-                    conf=0.45,
-                    iou=0.6 if DEVICE != 'cpu' else 0.45,
+                    conf=0.5 if DEVICE != 'cpu' else 0.45,
+                    iou=0.7 if DEVICE != 'cpu' else 0.5,
                     verbose=False,
                     device=DEVICE,
-                    half=(DEVICE != 'cpu'),
-                    max_det=150 if DEVICE != 'cpu' else 80
+                    half=(DEVICE == 'cuda:0'),  # FP16 solo en CUDA
+                    max_det=300 if DEVICE != 'cpu' else 100,
+                    stream=False
                 )
                 annotated_frame = results[0].plot()
                 
@@ -814,22 +839,40 @@ def get_animal_description():
 
 @app.route('/chatbot', methods=['POST'])
 def chatbot():
-    """Chat breve usando API Sonar Pro de Perplexity"""
+    """Chat breve usando API Sonar de Perplexity con contexto del animal detectado"""
     data = request.json or {}
     question = (data.get('question') or '').strip()
+    animal_name = (data.get('animal') or '').strip().lower()  # Nombre del animal detectado
+    
     if not question:
         return jsonify({'error': 'Pregunta vacía'}), 400
 
-    api_key = os.getenv('SONAR_API_KEY')
+    # API Key de Perplexity - usar directamente o desde variable de entorno
+    api_key = 'wa'  # Tu API key
+    # Alternativa: api_key = os.getenv('PERPLEXITY_API_KEY', 'wa')
+    
     if not api_key:
-        return jsonify({'error': 'Falta SONAR_API_KEY en variables de entorno'}), 500
+        return jsonify({'error': 'Falta API key de Perplexity'}), 500
 
     try:
+        # Construir pregunta con contexto del animal
+        contextualized_question = question
+        
+        if animal_name and animal_name in ANIMAL_DESCRIPTIONS:
+            # Obtener información del animal de la base de conocimiento
+            animal_info = ANIMAL_DESCRIPTIONS[animal_name]
+            nombre_cientifico = animal_info.get('nombre_cientifico', '')
+            
+            # Agregar contexto específico del animal a la pregunta
+            contextualized_question = f"Sobre el animal {animal_name} ({nombre_cientifico}), que es un animal andino: {question}. Por favor responde de forma breve y específica sobre este animal."
+        elif animal_name:
+            # Si hay nombre de animal pero no está en la base de datos
+            contextualized_question = f"Sobre el animal {animal_name} de los Andes: {question}. Responde de forma breve."
+        
+        # Usar modelos actualizados de Perplexity (2025)
         payload = {
-            "model": "sonar-pro",
-            "messages": [{"role": "user", "content": question}],
-            "max_tokens": 160,
-            "temperature": 0.4
+            "model": "sonar",  # Modelo base más confiable
+            "messages": [{"role": "user", "content": contextualized_question}]
         }
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -843,15 +886,147 @@ def chatbot():
         )
         if resp.status_code != 200:
             return jsonify({'error': f'API error {resp.status_code}', 'detail': resp.text[:500]}), 502
-        data = resp.json()
-        content = data.get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+        
+        response_data = resp.json()
+        content = response_data.get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+        
         if not content:
             content = 'No se recibió respuesta.'
-        # Limitar longitud
-        content = content[:1200]
-        return jsonify({'answer': content})
+        
+        # Limpiar formato Markdown para mejor visualización
+        content = clean_markdown_format(content)
+        
+        # Limitar longitud para respuestas breves
+        content = content[:800]  # Reducido para respuestas más concisas
+        
+        return jsonify({
+            'answer': content,
+            'animal': animal_name  # Devolver el animal para referencia
+        })
     except Exception as e:
         return jsonify({'error': f'Fallo en chatbot: {str(e)}'}), 500
 
+def clean_markdown_format(text):
+    """Limpia formato Markdown de la respuesta para mejor visualización en texto plano"""
+    import re
+    
+    # Remover negritas **texto** o __texto__
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    text = re.sub(r'__(.+?)__', r'\1', text)
+    
+    # Remover itálicas *texto* o _texto_
+    text = re.sub(r'\*(.+?)\*', r'\1', text)
+    text = re.sub(r'_(.+?)_', r'\1', text)
+    
+    # Remover referencias de citas [1], [2], etc.
+    text = re.sub(r'\[\d+\]', '', text)
+    
+    # Remover enlaces [texto](url) -> solo dejar texto
+    text = re.sub(r'\[(.+?)\]\(.+?\)', r'\1', text)
+    
+    # Remover encabezados ## o ###
+    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+    
+    # Remover código inline `texto`
+    text = re.sub(r'`(.+?)`', r'\1', text)
+    
+    # Limpiar espacios múltiples
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Limpiar espacios al inicio y final
+    text = text.strip()
+    
+    return text
+
+@app.route('/gpu_status')
+def gpu_status():
+    """Obtener estado de GPU en tiempo real"""
+    status = {
+        'device': DEVICE,
+        'cuda_available': torch.cuda.is_available()
+    }
+    
+    if torch.cuda.is_available():
+        try:
+            status['gpu_name'] = torch.cuda.get_device_name(0)
+            status['gpu_count'] = torch.cuda.device_count()
+            
+            # Memoria GPU
+            mem_allocated = torch.cuda.memory_allocated(0) / 1024**2  # MB
+            mem_reserved = torch.cuda.memory_reserved(0) / 1024**2  # MB
+            mem_total = torch.cuda.get_device_properties(0).total_memory / 1024**2  # MB
+            
+            status['memory'] = {
+                'allocated_mb': round(mem_allocated, 2),
+                'reserved_mb': round(mem_reserved, 2),
+                'total_mb': round(mem_total, 2),
+                'percent': round((mem_allocated / mem_total) * 100, 2)
+            }
+            
+            # Intentar obtener stats adicionales con nvidia-ml-py
+            try:
+                import pynvml
+                pynvml.nvmlInit()
+                handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+                
+                # Utilización
+                util = pynvml.nvmlDeviceGetUtilizationRates(handle)
+                status['utilization'] = {
+                    'gpu_percent': util.gpu,
+                    'memory_percent': util.memory
+                }
+                
+                # Temperatura
+                temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
+                status['temperature_c'] = temp
+                
+                # Potencia
+                try:
+                    power = pynvml.nvmlDeviceGetPowerUsage(handle) / 1000.0  # W
+                    status['power_w'] = round(power, 2)
+                except:
+                    pass
+                
+                pynvml.nvmlShutdown()
+            except:
+                pass  # nvidia-ml-py no disponible
+                
+        except Exception as e:
+            status['error'] = str(e)
+    
+    return jsonify(status)
+
+@app.route('/performance_metrics')
+def performance_metrics():
+    """Obtener métricas de rendimiento del sistema"""
+    metrics = {
+        'device': DEVICE,
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    # Stats de CPU
+    try:
+        import psutil
+        metrics['cpu'] = {
+            'percent': psutil.cpu_percent(interval=0.1),
+            'memory_percent': psutil.virtual_memory().percent,
+            'memory_used_mb': round(psutil.virtual_memory().used / 1024**2, 2)
+        }
+    except:
+        pass
+    
+    # Stats de GPU
+    if torch.cuda.is_available():
+        try:
+            metrics['gpu'] = {
+                'memory_allocated_mb': round(torch.cuda.memory_allocated(0) / 1024**2, 2),
+                'memory_reserved_mb': round(torch.cuda.memory_reserved(0) / 1024**2, 2)
+            }
+        except:
+            pass
+    
+    return jsonify(metrics)
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000, threaded=True)
+

@@ -95,7 +95,7 @@ uploadArea.addEventListener('dragleave', () => {
 uploadArea.addEventListener('drop', (e) => {
     e.preventDefault();
     uploadArea.classList.remove('dragging');
-    
+
     const files = e.dataTransfer.files;
     if (files.length > 0) {
         handleVideoFile(files[0]);
@@ -154,10 +154,10 @@ function uploadVideo(file) {
             const response = JSON.parse(xhr.responseText);
             progressText.textContent = 'Video subido. Procesando con YOLO...';
             progressFill.style.width = '100%';
-            
+
             // Opcional: si quieres ver el stream en tiempo real, habilita la línea siguiente.
             // startLiveStream(response.stream_url, response.output_filename);
-            
+
             // Verificar cuando el video esté listo
             checkVideoStatus(response.output_filename, response.total_frames || 0);
 
@@ -169,7 +169,7 @@ function uploadVideo(file) {
             uploadProgress.style.display = 'none';
         }
     });
-    
+
     // Manejo de errores
     xhr.addEventListener('error', () => {
         alert('Error de red al subir video');
@@ -188,7 +188,7 @@ function updateVideoSessionId(filename) {
     currentSessionId = filename;
     const liveStream = document.getElementById('liveStream');
     const detectedVideo = document.getElementById('detectedVideo');
-    
+
     if (liveStream) {
         liveStream.dataset.filename = filename;
     }
@@ -201,16 +201,16 @@ function startLiveStream(streamUrl, filename) {
     const liveProcessingDiv = document.getElementById('liveProcessing');
     const liveStream = document.getElementById('liveStream');
     const processingPlaceholder = document.getElementById('processingPlaceholder');
-    
+
     // Mostrar contenedor de stream en tiempo real
     liveProcessingDiv.style.display = 'block';
     processingPlaceholder.style.display = 'block';
-    
+
     // Actualizar session ID
     if (filename) {
         updateVideoSessionId(filename);
     }
-    
+
     // Iniciar stream después de un pequeño delay para asegurar que el servidor esté listo
     setTimeout(() => {
         liveStream.src = streamUrl + '?' + new Date().getTime();
@@ -245,9 +245,9 @@ function checkVideoStatus(filename, totalFrames = 0) {
                     const progress = data.progress || 0;
                     const processed = data.processed_frames || 0;
                     const total = data.total_frames || totalFrames;
-                    
+
                     progressFill.style.width = progress + '%';
-                    
+
                     if (total > 0) {
                         progressText.textContent = `Procesando: ${processed}/${total} frames (${progress}%)`;
                     } else {
@@ -264,12 +264,12 @@ function checkVideoStatus(filename, totalFrames = 0) {
 function stopLiveStream() {
     const liveStream = document.getElementById('liveStream');
     const liveProcessingDiv = document.getElementById('liveProcessing');
-    
+
     if (liveStream) {
         liveStream.src = '';
         liveStream.classList.remove('active');
     }
-    
+
     // Ocultar después de un delay para que se vea el último frame
     setTimeout(() => {
         if (liveProcessingDiv) {
@@ -280,7 +280,7 @@ function stopLiveStream() {
 
 function showProcessedVideo(videoUrl, filename, fps = null) {
     uploadProgress.style.display = 'none';
-    
+
     const processedVideoDiv = document.getElementById('processedVideo');
     const detectedVideo = document.getElementById('detectedVideo');
     const overlay = document.getElementById('detectedOverlay');
@@ -303,7 +303,7 @@ function showProcessedVideo(videoUrl, filename, fps = null) {
     }
 
     progressText.textContent = 'Video procesado exitosamente';
-    
+
     // Scroll suave al video procesado
     processedVideoDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -326,15 +326,15 @@ let detectionCheckInterval = null;
 // Función para detectar qué bounding box fue clickeado
 function getClickedDetection(x, y, detections, imgWidth, imgHeight, displayWidth, displayHeight) {
     if (!detections || detections.length === 0) return null;
-    
+
     // Calcular escala entre imagen original y display
     const scaleX = imgWidth / displayWidth;
     const scaleY = imgHeight / displayHeight;
-    
+
     // Ajustar coordenadas del click a la escala de la imagen original
     const adjustedX = x * scaleX;
     const adjustedY = y * scaleY;
-    
+
     // Buscar el bounding box que contiene el punto clickeado
     for (let det of detections) {
         const bbox = det.bbox;
@@ -343,7 +343,7 @@ function getClickedDetection(x, y, detections, imgWidth, imgHeight, displayWidth
             return det;
         }
     }
-    
+
     return null;
 }
 
@@ -399,9 +399,9 @@ async function showAnimalDescription(animal, confidence, sessionId = '') {
             },
             body: JSON.stringify({ animal: animal })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.description) {
             const desc = data.description;
             // Modal
@@ -411,7 +411,7 @@ async function showAnimalDescription(animal, confidence, sessionId = '') {
             document.getElementById('modalHabitat').textContent = desc.habitat || 'No disponible';
             document.getElementById('modalUses').textContent = desc.usos || 'No disponible';
             document.getElementById('modalConfidence').textContent = `Confianza: ${(confidence * 100).toFixed(1)}%`;
-            
+
             // Llenar características modal
             const characteristicsList = document.getElementById('modalCharacteristics');
             characteristicsList.innerHTML = '';
@@ -422,7 +422,7 @@ async function showAnimalDescription(animal, confidence, sessionId = '') {
                     characteristicsList.appendChild(li);
                 });
             }
-            
+
             // Panel lateral
             const isRealtime = sessionId === 'realtime';
             const panelRoot = isRealtime ? document.getElementById('infoPanelRealtime') : document.getElementById('infoPanel');
@@ -468,7 +468,7 @@ async function showAnimalDescription(animal, confidence, sessionId = '') {
                     placeholder.style.display = 'none';
                 }
             }
-            
+
             // Mostrar modal
             document.getElementById('animalModal').style.display = 'block';
 
@@ -490,30 +490,30 @@ async function showAnimalDescription(animal, confidence, sessionId = '') {
 async function handleMediaClick(event, sessionId) {
     const element = event.target;
     const rect = element.getBoundingClientRect();
-    
+
     // Coordenadas relativas al elemento
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
-    
+
     // Obtener dimensiones de display y originales
     const displayWidth = rect.width;
     const displayHeight = rect.height;
-    
+
     // Obtener detecciones actuales
     const detectionData = await getCurrentDetections(sessionId);
-    
+
     if (!detectionData || !detectionData.detections || detectionData.detections.length === 0) {
         return; // No hay detecciones
     }
-    
+
     // Obtener dimensiones originales de la imagen
     const imgWidth = detectionData.width || element.naturalWidth || element.videoWidth;
     const imgHeight = detectionData.height || element.naturalHeight || element.videoHeight;
-    
+
     // Buscar detección clickeada
-    const clickedDetection = getClickedDetection(x, y, detectionData.detections, 
-                                                 imgWidth, imgHeight, displayWidth, displayHeight);
-    
+    const clickedDetection = getClickedDetection(x, y, detectionData.detections,
+        imgWidth, imgHeight, displayWidth, displayHeight);
+
     if (clickedDetection) {
         await showAnimalDescription(clickedDetection.class, clickedDetection.confidence, sessionId);
     }
@@ -528,7 +528,7 @@ function setupClickDetection() {
             handleMediaClick(e, 'realtime');
         });
     }
-    
+
     // Stream en tiempo real de video
     const liveStream = document.getElementById('liveStream');
     if (liveStream) {
@@ -537,7 +537,7 @@ function setupClickDetection() {
             handleMediaClick(e, outputFilename);
         });
     }
-    
+
     // Video procesado
     const detectedVideo = document.getElementById('detectedVideo');
     if (detectedVideo) {
@@ -616,21 +616,21 @@ function renderHistory(history) {
                     // Forzar recarga del video
                     detectedVideo.load();
                     // Intentar reproducir (ignorar autoplay bloqueado)
-                    detectedVideo.play().catch(() => {});
+                    detectedVideo.play().catch(() => { });
                     processedVideoDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-                // Dibujar overlay al cargar metadatos
-                const overlay = document.getElementById('detectedOverlay');
-                if (overlay) {
-                    detectedVideo.onloadedmetadata = () => {
+                    // Dibujar overlay al cargar metadatos
+                    const overlay = document.getElementById('detectedOverlay');
+                    if (overlay) {
+                        detectedVideo.onloadedmetadata = () => {
                             drawDetectionsOnElement(detectedVideo, overlay, item.output_filename);
                             startProcessedOverlayUpdater(detectedVideo, overlay, item.output_filename);
-                    };
+                        };
                         // También redibujar al tiempo cambiar
                         detectedVideo.ontimeupdate = () => {
                             drawDetectionsOnElement(detectedVideo, overlay, item.output_filename);
                         };
-                }
+                    }
                 }
             };
             actions.appendChild(viewBtn);
@@ -713,16 +713,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (refreshHistoryBtn) {
         refreshHistoryBtn.addEventListener('click', loadHistory);
     }
-    
+
     const modal = document.getElementById('animalModal');
     const closeBtn = document.querySelector('.modal-close');
-    
+
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
             modal.style.display = 'none';
         });
     }
-    
+
     // Cerrar al hacer click fuera del modal
     window.addEventListener('click', (e) => {
         if (e.target === modal) {
@@ -730,25 +730,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Chatbot
-    const bindChat = (btnId, questionId, answerId) => {
+    // Chatbot con contexto del animal
+    const bindChat = (btnId, questionId, answerId, animalNameId) => {
         const btn = document.getElementById(btnId);
         if (!btn) return;
         btn.addEventListener('click', async () => {
             const questionEl = document.getElementById(questionId);
             const answerEl = document.getElementById(answerId);
+            const animalNameEl = document.getElementById(animalNameId);
+
             if (!questionEl || !answerEl) return;
             const q = questionEl.value.trim();
             if (!q) {
                 answerEl.textContent = 'Escribe una pregunta.';
                 return;
             }
+
+            // Obtener el nombre del animal del panel (si está disponible)
+            const animalName = animalNameEl ? animalNameEl.textContent.trim().toLowerCase() : '';
+
             answerEl.textContent = 'Consultando...';
             try {
                 const resp = await fetch('/chatbot', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question: q })
+                    body: JSON.stringify({
+                        question: q,
+                        animal: animalName  // Enviar nombre del animal para contexto
+                    })
                 });
                 const data = await resp.json();
                 if (resp.ok && data.answer) {
@@ -762,10 +771,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // Chat en video procesado
-    bindChat('chatSendBtn', 'chatQuestion', 'chatAnswer');
-    // Chat en tiempo real
-    bindChat('rtChatSendBtn', 'rtChatQuestion', 'rtChatAnswer');
+    // Chat en video procesado (con nombre de animal)
+    bindChat('chatSendBtn', 'chatQuestion', 'chatAnswer', 'panelAnimalName');
+    // Chat en tiempo real (con nombre de animal)
+    bindChat('rtChatSendBtn', 'rtChatQuestion', 'rtChatAnswer', 'rtPanelAnimalName');
 });
 
 // Actualizar sessionId cuando se carga un video
@@ -773,7 +782,7 @@ function updateVideoSessionId(filename) {
     currentSessionId = filename;
     const liveStream = document.getElementById('liveStream');
     const detectedVideo = document.getElementById('detectedVideo');
-    
+
     if (liveStream) {
         liveStream.dataset.filename = filename;
     }
