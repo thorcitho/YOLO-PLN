@@ -738,12 +738,18 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', async () => {
             const questionEl = document.getElementById(questionId);
             const answerEl = document.getElementById(answerId);
+            const animalNameEl = document.getElementById(animalNameId);
+
             if (!questionEl || !answerEl) return;
             const q = questionEl.value.trim();
             if (!q) {
                 answerEl.textContent = 'Escribe una pregunta.';
                 return;
             }
+
+            // Obtener el nombre del animal del panel (si está disponible)
+            const animalName = animalNameEl ? animalNameEl.textContent.trim().toLowerCase() : '';
+
             answerEl.textContent = 'Consultando...';
             try {
                 const resp = await fetch('/chatbot', {
