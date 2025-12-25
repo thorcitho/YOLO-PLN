@@ -1149,7 +1149,7 @@ def get_animal_description():
 # ==================== CONFIGURACIÓN API PERPLEXITY ====================
 # IMPORTANTE: Coloca aquí tu clave API de Perplexity
 # Puedes obtenerla en: https://www.perplexity.ai/settings/api
-PERPLEXITY_API_KEY = ""  # <-- Reemplaza con tu clave API
+PERPLEXITY_API_KEY = "wa"  # <-- Reemplaza con tu clave API
 
 @app.route('/chatbot', methods=['POST'])
 def chatbot():

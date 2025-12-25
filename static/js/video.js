@@ -426,21 +426,58 @@ function setupVideoClickDetection() {
         });
     }
 
-    // Video procesado
+    // Video procesado - USAR CANVAS OVERLAY en lugar del video
     const detectedVideo = document.getElementById('detectedVideo');
-    if (detectedVideo) {
-        detectedVideo.addEventListener('click', (e) => {
+    const overlay = document.getElementById('detectedOverlay');
+    
+    if (overlay && detectedVideo) {
+        // Click en el CANVAS overlay (no en el video)
+        overlay.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
             const outputFilename = detectedVideo.dataset.filename || 'unknown';
-            handleMediaClick(e, outputFilename);
+            handleCanvasClick(e, overlay, detectedVideo, outputFilename);
         });
 
         // Redibujar overlay cuando el video cambia de tiempo
         detectedVideo.addEventListener('timeupdate', () => {
-            const overlay = document.getElementById('detectedOverlay');
             if (overlay) {
                 drawDetectionsOnElement(detectedVideo, overlay, detectedVideo.dataset.filename || 'unknown');
             }
         });
+    }
+}
+
+// Nueva función para manejar clicks en el canvas overlay
+async function handleCanvasClick(event, canvasEl, videoEl, sessionId) {
+    const rect = canvasEl.getBoundingClientRect();
+    
+    // Coordenadas relativas al canvas
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    
+    // Calcular frame actual del video
+    const fps = parseFloat(videoEl.dataset.fps || '30');
+    const frameIndex = Math.floor(videoEl.currentTime * fps);
+    
+    // Obtener detecciones actuales
+    const detectionData = await getCurrentDetections(sessionId, frameIndex);
+    
+    if (!detectionData || !detectionData.detections || detectionData.detections.length === 0) {
+        return; // No hay detecciones
+    }
+    
+    // Obtener dimensiones originales de la imagen
+    const imgWidth = detectionData.width || videoEl.videoWidth;
+    const imgHeight = detectionData.height || videoEl.videoHeight;
+    
+    // Buscar detección clickeada
+    const clickedDetection = getClickedDetection(x, y, detectionData.detections,
+        imgWidth, imgHeight, rect.width, rect.height);
+    
+    if (clickedDetection) {
+        await showAnimalDescription(clickedDetection.class, clickedDetection.confidence, sessionId);
     }
 }
 
